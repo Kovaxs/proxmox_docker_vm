@@ -1,0 +1,13 @@
+# Terraform state, plans, provider caches, and local configuration.
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/tfplan
+terraform/*.tfplan
+terraform/crash.log
+terraform/terraform.tfvars
+terraform/*.auto.tfvars
+
+# Local Ansible inventory and retry files.
+ansible/inventory.ini
+ansible/*.retry
