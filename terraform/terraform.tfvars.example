@@ -1,0 +1,20 @@
+pve_api_url  = "https://192.168.5.144:8006"
+pve_api_user = "root@pam"
+
+node_name      = "prox"
+vm_name        = "docker"
+vm_id          = 823
+template_vm_id = 9005
+
+network_bridge = "vmbr0"
+mac_address    = "bc:24:11:08:10:0d"
+disk_datastore = "local-lvm"
+disk_size      = 50
+cores          = 4
+memory_mb      = 16384
+
+lan_cidr = "192.168.5.0/24"
+ci_user  = "kovaxs"
+
+# Replace this value with your public key. Do not put a private key here.
+ssh_public_key = "ssh-ed25519 REPLACE_WITH_YOUR_PUBLIC_KEY"

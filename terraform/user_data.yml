@@ -1,0 +1,30 @@
+#cloud-config
+# Base guest setup only. Ansible installs and configures Docker separately.
+# Changes to this snippet take effect on a fresh clone, not an existing VM.
+
+users:
+  - name: ${ci_user}
+    groups: [sudo]
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+
+package_update: true
+packages:
+  - qemu-guest-agent
+  - python3
+  - python3-apt
+  - curl
+  - ca-certificates
+  - ufw
+
+runcmd:
+  - [systemctl, enable, --now, qemu-guest-agent]
+  - [hostnamectl, set-hostname, ${hostname}]
+  - |
+    ufw default deny incoming
+    ufw default allow outgoing
+    ufw allow from ${lan_cidr} to any port 22 proto tcp
+    ufw --force enable

@@ -1,0 +1,57 @@
+secretspec_bin := env_var_or_default("SECRETSPEC", "secretspec")
+tf_bin         := env_var_or_default("TF", "terraform")
+manifest       := "secretspec.toml"
+planfile       := "tfplan"
+run            := secretspec_bin + " --file " + manifest + " run -- "
+
+default:
+    just --list
+
+# Check that the Proxmox password resolves without printing it.
+check:
+    {{secretspec_bin}} --file {{manifest}} check --provider pass --profile default --no-prompt
+
+init:
+    {{run}}{{tf_bin}} init
+
+fmt:
+    {{tf_bin}} fmt -recursive -check -diff
+
+validate:
+    {{tf_bin}} validate
+
+plan:
+    {{run}}{{tf_bin}} plan -out={{planfile}}
+
+# Apply only the plan saved by `just plan`.
+apply:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ ! -f {{planfile}} ]]; then
+      printf 'No saved plan. Run `just plan` first.\n' >&2
+      exit 1
+    fi
+    {{run}}{{tf_bin}} apply {{planfile}}
+
+output:
+    {{run}}{{tf_bin}} output
+
+state:
+    {{run}}{{tf_bin}} state list
+
+destroy:
+    {{run}}{{tf_bin}} destroy
+
+ssh:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ip=$({{run}}{{tf_bin}} output -raw docker_ipv4_address 2>/dev/null || true)
+    if [[ -z "$ip" || "$ip" == "null" ]]; then
+      printf 'No guest IPv4 address. Wait for cloud-init and qemu-guest-agent.\n' >&2
+      exit 1
+    fi
+    exec ssh -o StrictHostKeyChecking=accept-new "kovaxs@$ip"
+
+clean:
+    rm -f {{planfile}}
+    rm -rf .terraform
