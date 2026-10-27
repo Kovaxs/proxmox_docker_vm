@@ -1,0 +1,4 @@
+---
+# Membership in this group grants access to the root-equivalent Docker socket.
+docker_users:
+  - kovaxs

@@ -1,0 +1,99 @@
+---
+- name: Install and configure Docker
+  hosts: docker
+  become: true
+  gather_facts: true
+
+  vars:
+    docker_architecture_map:
+      x86_64: amd64
+      aarch64: arm64
+      armv7l: armhf
+    docker_apt_architecture: "{{ docker_architecture_map[ansible_facts.architecture] }}"
+
+  tasks:
+    - name: Check the target platform
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.distribution == 'Ubuntu'
+          - ansible_facts.architecture in docker_architecture_map
+        fail_msg: "This playbook supports Docker's Ubuntu repository on amd64, arm64, and armhf."
+
+    - name: Install repository prerequisites
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - python3-debian
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Create the APT keyring directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Install Docker's signing key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Add Docker's APT repository
+      ansible.builtin.deb822_repository:
+        name: docker
+        types:
+          - deb
+        uris:
+          - https://download.docker.com/linux/ubuntu
+        suites:
+          - "{{ ansible_facts.distribution_release }}"
+        components:
+          - stable
+        architectures:
+          - "{{ docker_apt_architecture }}"
+        signed_by: /etc/apt/keyrings/docker.asc
+        enabled: true
+        state: present
+        mode: '0644'
+
+    - name: Install Docker Engine and Compose
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Enable and start Docker
+      ansible.builtin.service:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: Grant Docker access to the cloud-init user
+      ansible.builtin.user:
+        name: "{{ item }}"
+        groups:
+          - docker
+        append: true
+      loop: "{{ docker_users | default([]) }}"
+
+    - name: Verify the Docker daemon
+      ansible.builtin.command: docker info
+      changed_when: false
+      when: not ansible_check_mode
+
+    - name: Verify Docker Compose
+      ansible.builtin.command: docker compose version
+      changed_when: false
+      when: not ansible_check_mode
